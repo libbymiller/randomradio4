@@ -9,6 +9,7 @@ require 'open-uri'
 require 'net/http'
 require 'json/pure'
 require 'sqlite3'
+require 'twitter'
 
 # This class, which you should cron to run every five minutes, looks in the database to find out what programmes are on now
 # and announces it on Twitter
@@ -23,29 +24,40 @@ class TodaysTwits
     @db = SQLite3::Database.open('beeb.db')
 
     def TodaysTwits.post(text)
-        u = "http://twitter.com/statuses/update.json"
-        url = URI.parse u
-        puts "sending update #{text}"
 
-        req = Net::HTTP::Post.new(url.path)
-        req.basic_auth 'username', 'password' # put the real username and pass here
-        req.set_form_data({'status'=>text}, ';')
-        res = Net::HTTP.new(url.host, url.port).start {|http|http.request(req) }
+        # get these configuration parameters by creating a new app from https://dev.twitter.com/apps
 
-        j = nil
-        begin
-            j = JSON.parse(res.body)
-        rescue OpenURI::HTTPError=>e
-            case e.to_s
-                when /^404/
-                    raise 'Not Found'
-                when /^304/
-                    raise 'No Info'
-                when /^error/
-                    raise 'Error'
-            end
+        Twitter.configure do |config|
+           config.consumer_key = ""
+           config.consumer_secret = ""
+           config.oauth_token =  ""
+           config.oauth_token_secret = ""
         end
+
+      limit = nil
+
+      # check rate limit status
+
+      begin
+        limit = Twitter.rate_limit_status
+      rescue Exception=>e
+        puts "error getting rate limit #{e}"
+        e.backtrace
+      end
+
+      # tweet
+
+      if(limit && limit["remaining_hits"] > 0)
+        begin
+           Twitter.update(text)
+           puts "TWEETED #{text}"
+        rescue Exception=>e
+           puts "exception tweeting #{e}"
+        end
+      end
+
     end
+
 
     begin
         arr = []
@@ -76,29 +88,35 @@ class TodaysTwits
             # what's the difference between the starting minute and the current minute?
             starttime = row["STARTTIME"]
 
-            timeTilStart = Time.parse(starttime).min - Time.now.min
+            timeTilStart = Time.parse(starttime) - Time.now
 
             # Text niceness
-            progInfo = "#{title} #pid:#{pid} http://bbc.co.uk/i/#{pid.gsub('b00', '')}"
+            progInfo = "#{title} http://www.bbc.co.uk/programmes/#{pid}"
 
-            if timeTilStart > 0
-              arr.push("In a few minutes on Radio 4: " + progInfo)
-            else
+            if timeTilStart == 0
               arr.push("Starting now on Radio 4: " + progInfo)
+            else
+              if(timeTilStart > 0)
+                arr.push("In a few minutes on Radio 4: " + progInfo)
+              else
+                arr.push("Just started on Radio 4: " + progInfo)
+              end
             end
 
             puts "#{arr.length} items to send"
         end
 
         # The longest message looks like this:
-        # "In a few minutes on Radio 4: TITLE #pid:b00pnpn0 http://bbc.co.uk/i/pnpn0"
-        # It is 68 chars + title, leaving us 72 chars for TITLE and SUBTITLE
+        # "In a few minutes on Radio 4: TITLE http://www.bbc.co.uk/programmes/b00pnpn0"
+        # It is 30 chars + link (16) + title, leaving us 96 chars for TITLE and SUBTITLE
 
         # Send the found data to Twitter
+        # we may have more than one message
         x = 0
         while x < arr.length
           puts arr[x]
           TodaysTwits.post(arr[x])
+          sleep 1
           x = x + 1
         end
 

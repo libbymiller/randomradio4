@@ -88,7 +88,7 @@ class Twitter
                puts "#{x} #{starttime} #{title}"
 
               # break the ISO8601 timestamp into YYYY-MM-DD and HH:MM:SS and insert
-              if (starttime != nil && starttime =~ /(.*)T(.*)Z/)
+              if (starttime != nil && starttime =~ /(.*)T(.*)[Z|\+]/)
                 d = $1
                 t = $2
                 ds = "#{d} #{t}"

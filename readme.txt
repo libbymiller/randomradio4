@@ -47,10 +47,25 @@ with SQLite (separate download on Windows) or a GUI like:
 $ gem install json_pure 
 
 
-4. Running the ruby files
+4. Installing the Twitter gem
+-----------------------
+
+$ gem install twitter
+
+
+5. Running the ruby files
 -------------------------
 
-Edit the todaysTwits.rb with the correct username and password
+Edit the todaysTwits.rb with the correct twitter credentials
 
 $ ruby beeb.rb # run once a day between 1am and 5:20am
 $ ruby todaysTwits.rb # run every 5 minutes
+
+sample crontab:
+
+# charbotgreen
+# ruby beeb.rb # run once a day between 1am and 5:20am
+2 5 * * * cd /home/ubuntu/charbotgreen; ruby beeb.rb > beeb.log
+
+# ruby todaysTwits.rb # run every 5 minutes
+*/5 * * * * cd /home/ubuntu/charbotgreen; ruby todaysTwits.rb > twits.log
