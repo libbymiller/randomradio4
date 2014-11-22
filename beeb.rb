@@ -30,8 +30,12 @@ class Twitter
 
     def Twitter.status()
 
-        u = "http://www.bbc.co.uk/radio4/programmes/schedules/fm/today.json"
-        da = DateTime.now - (30/1440.0)
+        u = "http://www.bbc.co.uk/radio4/programmes/schedules/fm/"
+        dt = DateTime.now
+        da = dt - (30/1440.0)
+        dt_text = dt.strftime("%Y/%m/%d")
+        u = "#{u}#{dt_text}.json"
+
         url = URI.parse u
         puts "checking for updates #{url}"
 
@@ -88,6 +92,7 @@ class Twitter
                puts "#{x} #{starttime} #{title}"
 
               # break the ISO8601 timestamp into YYYY-MM-DD and HH:MM:SS and insert
+
               if (starttime != nil && starttime =~ /(.*)T(.*)[Z|\+]/)
                 d = $1
                 t = $2
